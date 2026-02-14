@@ -45,22 +45,15 @@ server.post('/neworder', express.json(), (request, response) => {
 //Add the /update/:id code here!
 server.put('/update/:id', express.text({type: '*/*'}), (request, response) => {
   orderWriteQueue = orderWriteQueue.then(() => {
-    let orderToUpdate = null;
-    let previousState = null;
-
-    orderData.orders.forEach((o) => {
-      if (o.id == request.params.id) {
-        orderToUpdate = o;
-        previousState = o.state;
-        o.state = request.body;
-      }
-    });
-
+    const orderToUpdate = orderData.orders.find(o => o.id == request.params.id);
     if (!orderToUpdate) {
       const err = new Error('Order not found');
       err.statusCode = 404;
       return Promise.reject(err);
     }
+
+    const previousState = orderToUpdate.state;
+    orderToUpdate.state = request.body;
 
     return new Promise((resolve, reject) => {
       fs.writeFile('orders.json', JSON.stringify(orderData), (err) => {
@@ -86,6 +79,22 @@ server.put('/update/:id', express.text({type: '*/*'}), (request, response) => {
 });
 
 //Add the /delete/:id code here!
+server.delete('/delete/:id', (request,response)=>{
+      var items = orderData.orders
+      var newData = {"orders": []}
+      items.forEach(function(o) {
+        console.log(o)
+          if (o.id == request.params.id){
+            console.log('Deleting order!') 
+          } else{
+            newData.orders.push(o)
+          }
+       });
+     
+      fs.writeFileSync('orders.json', JSON.stringify(newData));
+      response.send('Success');
+      console.log('Success');
+     });
 
 
 server.listen(3000,()=>{
