@@ -79,22 +79,40 @@ server.put('/update/:id', express.text({type: '*/*'}), (request, response) => {
 });
 
 //Add the /delete/:id code here!
-server.delete('/delete/:id', (request,response)=>{
-      var items = orderData.orders
-      var newData = {"orders": []}
-      items.forEach(function(o) {
-        console.log(o)
-          if (o.id == request.params.id){
-            console.log('Deleting order!') 
-          } else{
-            newData.orders.push(o)
-          }
-       });
-     
-      fs.writeFileSync('orders.json', JSON.stringify(newData));
-      response.send('Success');
-      console.log('Success');
-     });
+server.delete('/delete/:id', (request, response) => {
+  orderWriteQueue = orderWriteQueue.then(() => {
+    const previousOrders = orderData.orders.slice();
+    orderData.orders = orderData.orders.filter(o => o.id != request.params.id);
+
+    if (orderData.orders.length === previousOrders.length) {
+      orderData.orders = previousOrders;
+      const err = new Error('Order not found');
+      err.statusCode = 404;
+      return Promise.reject(err);
+    }
+
+    return new Promise((resolve, reject) => {
+      fs.writeFile('orders.json', JSON.stringify(orderData), (err) => {
+        if (err) {
+          orderData.orders = previousOrders;
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }).then(() => {
+    response.send('Success');
+    console.log('Success');
+  }).catch((err) => {
+    if (err.statusCode === 404) {
+      response.status(404).send('Order not found');
+    } else {
+      response.status(500).send('Error saving order');
+      console.error(err);
+    }
+  });
+});
 
 
 server.listen(3000,()=>{
