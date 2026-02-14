@@ -43,22 +43,37 @@ server.post('/neworder', express.json(), (request, response) => {
 
 
 //Add the /update/:id code here!
-server.put('/update/:id', express.text({type: '*/*'}), (request,response)=>{
-      var items = orderData.orders
-     
-      items.forEach(function(o) {
-        console.log(o)
-          if (o.id == request.params.id){
-            console.log('Modifying order!')
-            o.state = request.body; 
-          }  
-       });
-     
-      fs.writeFileSync('orders.json', JSON.stringify(orderData));
-      
-      response.send('Success');
-      console.log('Success');
-     });
+server.put('/update/:id', express.text({type: '*/*'}), (request, response) => {
+  orderWriteQueue = orderWriteQueue.then(() => {
+    let orderToUpdate = null;
+    let previousState = null;
+
+    orderData.orders.forEach((o) => {
+      if (o.id == request.params.id) {
+        orderToUpdate = o;
+        previousState = o.state;
+        o.state = request.body;
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      fs.writeFile('orders.json', JSON.stringify(orderData), (err) => {
+        if (err) {
+          if (orderToUpdate) orderToUpdate.state = previousState;
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }).then(() => {
+    response.send('Success');
+    console.log('Success');
+  }).catch((err) => {
+    response.status(500).send('Error saving order');
+    console.error(err);
+  });
+});
 
 //Add the /delete/:id code here!
 
