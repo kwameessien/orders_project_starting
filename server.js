@@ -56,10 +56,16 @@ server.put('/update/:id', express.text({type: '*/*'}), (request, response) => {
       }
     });
 
+    if (!orderToUpdate) {
+      const err = new Error('Order not found');
+      err.statusCode = 404;
+      return Promise.reject(err);
+    }
+
     return new Promise((resolve, reject) => {
       fs.writeFile('orders.json', JSON.stringify(orderData), (err) => {
         if (err) {
-          if (orderToUpdate) orderToUpdate.state = previousState;
+          orderToUpdate.state = previousState;
           reject(err);
         } else {
           resolve();
@@ -70,8 +76,12 @@ server.put('/update/:id', express.text({type: '*/*'}), (request, response) => {
     response.send('Success');
     console.log('Success');
   }).catch((err) => {
-    response.status(500).send('Error saving order');
-    console.error(err);
+    if (err.statusCode === 404) {
+      response.status(404).send('Order not found');
+    } else {
+      response.status(500).send('Error saving order');
+      console.error(err);
+    }
   });
 });
 
