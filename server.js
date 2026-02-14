@@ -11,7 +11,9 @@ server.get('/',(request,response)=>{
 
 
 //Add the /orders code here!
-
+server.get('/orders',(request,response)=>{
+ response.send(orderData);
+});
 
 //Add the /neworder code here!
 
